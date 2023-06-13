@@ -73,6 +73,8 @@ def operationRecognize(text):
     text = text.replace(',', '.')
     text = text.replace('х', 'x')  # русскую на английскую
     text = text.replace('поделить', '/')
+    text = text.replace('минус', '-')
+    text = text.replace('число пи', '3.14')
     if re.findall('\S+x|x+\S', text):
         text = text.replace('x', ' x ')
     if re.findall('\S+/|/+\S', text):
@@ -82,6 +84,7 @@ def operationRecognize(text):
     if re.findall('\S+-|-+\S', text):
         text = text.replace('-', ' - ')
     text = text.split()
+
     for i in text:
         try:
             exp.append(float(i))
@@ -90,13 +93,37 @@ def operationRecognize(text):
         if i in ['+', '-', 'x', '/']:
             exp.append(i)
 
-    for i in range(len(exp)):
+    if exp == []:
+        return 'error'
+
+
+    if exp[0] == '-' and isinstance(exp[1], float):
+        exp[1] = -exp[1]
+        exp.pop(0)
+
+    i = 1
+    while i < len(exp):
         if i % 2 == 0:
             if isinstance(exp[i], str):
-                return 'error'
+                if exp[i] == '-' and isinstance(exp[i - 1], str) and isinstance(exp[i + 1], float):
+                    exp[i + 1] = -exp[i + 1]
+                    exp.pop(i)
+                    i -= 1
+                else:
+                    return 'error'
         else:
             if isinstance(exp[i], float):
                 return 'error'
+        i += 1
+
+
+    # for i in range(len(exp)):
+    #     if i % 2 == 0:
+    #         if isinstance(exp[i], str):
+    #             return 'error'
+    #     else:
+    #         if isinstance(exp[i], float):
+    #             return 'error'
     if isinstance(exp[-1], str):
         return 'error'
 
