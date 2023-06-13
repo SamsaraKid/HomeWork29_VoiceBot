@@ -87,7 +87,7 @@ def operationRecognize(text):
             exp.append(float(i))
         except:
             pass
-        if i in ['+', '-', 'x', 'х', '/']:
+        if i in ['+', '-', 'x', '/']:
             exp.append(i)
 
     for i in range(len(exp)):
