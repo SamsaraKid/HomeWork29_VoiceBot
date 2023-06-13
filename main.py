@@ -83,6 +83,7 @@ def operationRecognize(text):
         text = text.replace('+', ' + ')
     if re.findall('\S+-|-+\S', text):
         text = text.replace('-', ' - ')
+
     text = text.split()
 
     for i in text:
@@ -97,23 +98,23 @@ def operationRecognize(text):
         return 'error'
 
 
-    if exp[0] == '-' and isinstance(exp[1], float):
-        exp[1] = -exp[1]
-        exp.pop(0)
+    if exp[0] == '-' and isinstance(exp[1], float):                                                    # если выражение начинается со знака '-', и следующее число
+        exp[1] = -exp[1]                                                                               # то следующее число делаем отрицательным
+        exp.pop(0)                                                                                     # а знак '-' выбрасываем
 
     i = 1
     while i < len(exp):
         if i % 2 == 0:
-            if isinstance(exp[i], str):
-                if exp[i] == '-' and isinstance(exp[i - 1], str) and isinstance(exp[i + 1], float):
-                    exp[i + 1] = -exp[i + 1]
-                    exp.pop(i)
-                    i -= 1
-                else:
+            if isinstance(exp[i], str):                                                                 # если на чётном месте знак
+                if exp[i] == '-' and isinstance(exp[i - 1], str) and isinstance(exp[i + 1], float):     # если этот знак '-' и предыдущее тоже знак и следующее число
+                    exp[i + 1] = -exp[i + 1]                                                            # то следующее число делаем отрицательным
+                    exp.pop(i)                                                                          # а знак '-' выбрасываем
+                    i -= 1                                                                              # и сдвигаем счётчик назад
+                else:                                                                                   # в остальных случаях выражение ошибочно
                     return 'error'
         else:
-            if isinstance(exp[i], float):
-                return 'error'
+            if isinstance(exp[i], float):                                                               # если на нечётном месте число
+                return 'error'                                                                          # то выражение ошибочно
         i += 1
 
 
