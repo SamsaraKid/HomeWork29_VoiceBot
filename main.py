@@ -27,7 +27,6 @@ def listen():  # слушаем команду
     except sr.WaitTimeoutError:
         print('Не дозвонились')
     # com = input('скажите команду\n')
-
     pass
 
 
@@ -70,11 +69,15 @@ def action(say):  # выполняем действие
 
 def operationRecognize(text):
     exp = []
+
+    # заменяем разные символы и выражения на нужные
     text = text.replace(',', '.')
     text = text.replace('х', 'x')  # русскую на английскую
     text = text.replace('поделить', '/')
     text = text.replace('минус', '-')
     text = text.replace('число пи', '3.14')
+
+    # если знак "прилип" к числу, ставим вокруг знака пробелы
     if re.findall('\S+x|x+\S', text):
         text = text.replace('x', ' x ')
     if re.findall('\S+/|/+\S', text):
@@ -84,8 +87,10 @@ def operationRecognize(text):
     if re.findall('\S+-|-+\S', text):
         text = text.replace('-', ' - ')
 
+    # разделяем получившуюся строку на массив
     text = text.split()
 
+    # из массива выбираем числа и знаки, числа переводим во float. выставляем числа и знаки в новом массиве по порядку
     for i in text:
         try:
             exp.append(float(i))
@@ -94,6 +99,7 @@ def operationRecognize(text):
         if i in ['+', '-', 'x', '/']:
             exp.append(i)
 
+    # если в массиве пусто, то выражения нет, ошибка
     if exp == []:
         return 'error'
 
@@ -101,6 +107,7 @@ def operationRecognize(text):
     if exp[0] == '-' and isinstance(exp[1], float):                                                    # если выражение начинается со знака '-', и следующее число
         exp[1] = -exp[1]                                                                               # то следующее число делаем отрицательным
         exp.pop(0)                                                                                     # а знак '-' выбрасываем
+
 
     i = 1
     while i < len(exp):
@@ -118,6 +125,10 @@ def operationRecognize(text):
         i += 1
 
 
+    # если последний элемент выражения знак, то ошибка
+    if isinstance(exp[-1], str):
+        return 'error'
+
     # for i in range(len(exp)):
     #     if i % 2 == 0:
     #         if isinstance(exp[i], str):
@@ -125,9 +136,14 @@ def operationRecognize(text):
     #     else:
     #         if isinstance(exp[i], float):
     #             return 'error'
-    if isinstance(exp[-1], str):
-        return 'error'
 
+
+    # выполняем арифметические действия.
+    # сначала все умножения и деления слева направо,
+    # потом сложения и вычитания слева направо.
+    # после нахождения очередного знака, выполняем его действие с соседними числами,
+    # результат записываем в массив вместо знака, а соседние числа выкидываем из массива
+    # всё это делаем пока в массиве есть нужный знак, или пока не достигнем конца массива
     i = 0
     while 'x' in exp or '/' in exp and i < len(exp):
         if exp[i] == 'x':
