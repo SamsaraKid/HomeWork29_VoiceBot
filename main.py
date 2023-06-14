@@ -15,7 +15,7 @@ def listen():  # слушаем команду
     print('Скажите команду')
     rec = sr.Recognizer()  # включение модуля расшифровщика
     with sr.Microphone() as source:  # называем микрофон source
-        voice = rec.listen(source, phrase_time_limit=6)  # запись того что с микрофона в течении 3 сек в переменную
+        voice = rec.listen(source, phrase_time_limit=4)  # запись того что с микрофона в течении 3 сек в переменную
     try:
         com = rec.recognize_google(voice, language='ru')  # расшифровывание звука в текст
         print('Вы сказали:', com)
@@ -46,10 +46,21 @@ def choose(msg):  # выбираем действие
         r = random.choice(films)
         action(r)
     elif 'посчитай' in msg:
-        if operationRecognize(msg) != 'error':
-            action(str(operationRecognize(msg)))
+        res, code = operationRecognize(msg)
+        if res == 'error':
+            match code:
+                case 1:
+                    action('пустое выражение. повторите ввод')
+                case 2:
+                    action('выражение начинается на знак. повторите ввод')
+                case 3:
+                    action('выражение оканчивается на знак. повторите ввод')
+                case 4:
+                    action('в выражении два знака подряд. повторите ввод')
+                case 5:
+                    action('в выражении два числа подряд. повторите ввод')
         else:
-            action('я вас не поняла, повторите')
+            action(str(res))
     elif 'молодец' in msg:
         action('рада вам помочь')
     else:
@@ -67,6 +78,17 @@ def action(say):  # выполняем действие
     pass
 
 
+def calculate(a, oper, b):  # выполнение операций
+    match oper:
+        case '+':
+            return a + b
+        case '-':
+            return a - b
+        case 'x':
+            return a * b
+        case '/':
+            return a / b
+
 def operationRecognize(text):
     exp = []
 
@@ -74,21 +96,12 @@ def operationRecognize(text):
     text = text.replace(',', '.')
     text = text.replace('х', 'x')  # русскую на английскую
     text = text.replace('поделить', '/')
+    text = text.replace('дробью', '/')
     text = text.replace('минус', '-')
-    text = text.replace('число пи', '3.14')
-    text = text.replace('скобка открывается', '(')
-    text = text.replace('скобка открывается', ')')
 
-    # если знак "прилип" к числу, ставим вокруг знака пробелы
-    if re.findall('\S+x|x+\S', text):
-        text = text.replace('x', ' x ')
+    # если знак "прилип" к числу, ставим вокруг знака пробелы, можно корректно обрабатывать "три-вторых"
     if re.findall('\S+/|/+\S', text):
         text = text.replace('/', ' / ')
-    if re.findall('\S+\+|\++\S', text):
-        text = text.replace('+', ' + ')
-    if re.findall('\S+\-|\-+\S', text):
-        text = text.replace('-', ' - ')
-
 
     # разделяем получившуюся строку на массив
     text = text.split()
@@ -99,103 +112,68 @@ def operationRecognize(text):
             exp.append(float(i))
         except:
             pass
-        if i in ['+', '-', 'x', '/', '(', ')']:
+        if i in ['+', '-', 'x', '/']:
             exp.append(i)
 
     # если в массиве пусто, то выражения нет, ошибка
-    if exp == []:
-        return 'error'
+    if not exp:
+        return 'error', 1
+
+    if exp[0] == '-' and isinstance(exp[1], float):       # если выражение начинается с '-', и следующее число
+        exp[1] = -exp[1]                                  # то следующее число делаем отрицательным
+        exp.pop(0)                                        # а '-' выбрасываем
+    elif exp[0] in ['+', 'x', '/']:                       # если первый элемент не число, то ошибка
+        return 'error', 2
 
     # если последний элемент выражения знак, то ошибка
     if isinstance(exp[-1], str):
-        return 'error'
-
-    if exp[0] == '-' and isinstance(exp[1], float):                                                    # если выражение начинается со знака '-', и следующее число
-        exp[1] = -exp[1]                                                                               # то следующее число делаем отрицательным
-        exp.pop(0)                                                                                     # а знак '-' выбрасываем
-    elif exp[0] in ['+', 'x', '/', ')']:                                                               # если первый элемент не число или не (, то ошибка
-        return 'error'
+        return 'error', 3
 
     # распознаём отрицательные числа
     i = 1
     while i < len(exp):
-        if exp[i] == '-' and isinstance(exp[i - 1], str) and isinstance(exp[i + 1], float):
-            exp[i + 1] = -exp[i + 1]
-            exp.pop(i)
+        if exp[i] == '-' and isinstance(exp[i - 1], str) and isinstance(exp[i + 1], float): # если до '-' знак, а после число
+            exp[i + 1] = -exp[i + 1]                                                        # то меняем знак числа
+            exp.pop(i)                                                                      # а '-' выбрасываем
         else:
             i += 1
 
-    # распознаём ошибки: два знака подряд, или два числа подряд, или знак после ( или знак перед ), или пустые скобки
-    expTemp = ' '.join(exp)
-    if re.findall('([\+\-/x]\s[\+\-/x])]', expTemp) or re.findall('\d\s\d', expTemp) or re.findall('(\(\s[\+\-/x])|([\+\-/x]\s\))', expTemp) or re.findall('\(\s\)', expTemp):
-        return 'error'
-
-
-
-
-    # проверка корректности выражения
-    # i = 1
-    # while i < len(exp):
-    #     if i % 2 == 0:
-    #         if isinstance(exp[i], str):                                                                 # если на чётном месте знак
-    #             if exp[i] == '-' and isinstance(exp[i - 1], str) and isinstance(exp[i + 1], float):     # если этот знак '-' и предыдущее тоже знак и следующее число
-    #                 exp[i + 1] = -exp[i + 1]                                                            # то следующее число делаем отрицательным
-    #                 exp.pop(i)                                                                          # а знак '-' выбрасываем
-    #                 i -= 1                                                                              # и сдвигаем счётчик назад
-    #             else:                                                                                   # в остальных случаях выражение ошибочно
-    #                 return 'error'
-    #     else:
-    #         if isinstance(exp[i], float):                                                               # если на нечётном месте число
-    #             return 'error'                                                                          # то выражение ошибочно
-    #     i += 1
-
-
-
-
-    # for i in range(len(exp)):
-    #     if i % 2 == 0:
-    #         if isinstance(exp[i], str):
-    #             return 'error'
-    #     else:
-    #         if isinstance(exp[i], float):
-    #             return 'error'
-
+    # распознаём ошибки:
+    expTemp = ' '.join(map(str, exp))
+    if re.findall('[+-\/x]\s[+-\/x]\s', expTemp):         # два знака подряд
+        return 'error', 4
+    elif re.findall('\d\s\d', expTemp):                   # два числа подряд
+        return 'error', 5
 
     # выполняем арифметические действия.
     # сначала все умножения и деления слева направо,
     # потом сложения и вычитания слева направо.
     # после нахождения очередного знака, выполняем его действие с соседними числами,
     # результат записываем в массив вместо знака, а соседние числа выкидываем из массива
-    # всё это делаем пока в массиве есть нужный знак, или пока не достигнем конца массива
-    i = 0
-    while 'x' in exp or '/' in exp and i < len(exp):
-        if exp[i] == 'x':
-            exp[i] = exp[i - 1] * exp[i + 1]
-            exp.pop(i + 1)
-            exp.pop(i - 1)
-        elif exp[i] == '/':
-            exp[i] = exp[i - 1] / exp[i + 1]
+    # всё это делаем пока в массиве есть нужный знак
+    i = 1
+    while 'x' in exp or '/' in exp:
+        if exp[i] in ['x', '/']:
+            exp[i] = calculate(exp[i - 1], exp[i], exp[i + 1])
             exp.pop(i + 1)
             exp.pop(i - 1)
         else:
             i += 1
-    i = 0
-    while '+' in exp or '-' in exp and i < len(exp):
-        if exp[i] == '+':
-            exp[i] = exp[i - 1] + exp[i + 1]
-            exp.pop(i + 1)
-            exp.pop(i - 1)
-        elif exp[i] == '-':
-            exp[i] = exp[i - 1] - exp[i + 1]
+    i = 1
+    while '+' in exp or '-' in exp:
+        if exp[i] in ['+', '-']:
+            exp[i] = calculate(exp[i - 1], exp[i], exp[i + 1])
             exp.pop(i + 1)
             exp.pop(i - 1)
         else:
             i += 1
+
+    # выводим результат. если целый, преобразуем его в int. если не целый, округляем до 2 цифр после запятой
     if exp[0] == int(exp[0]):
         exp[0] = int(exp[0])
     else:
         exp[0] = round(exp[0], 2)
-    return exp[0]
+    return exp[0], 0
 
 
 
@@ -203,3 +181,5 @@ def operationRecognize(text):
 
 while True:
     listen()
+
+
