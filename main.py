@@ -15,7 +15,7 @@ def listen():  # слушаем команду
     print('Скажите команду')
     rec = sr.Recognizer()  # включение модуля расшифровщика
     with sr.Microphone() as source:  # называем микрофон source
-        voice = rec.listen(source, phrase_time_limit=4)  # запись того что с микрофона в течении 3 сек в переменную
+        voice = rec.listen(source, phrase_time_limit=5)  # запись того что с микрофона в течении 3 сек в переменную
     try:
         com = rec.recognize_google(voice, language='ru')  # расшифровывание звука в текст
         print('Вы сказали:', com)
@@ -89,6 +89,7 @@ def calculate(a, oper, b):  # выполнение операций
         case '/':
             return a / b
 
+
 def operationRecognize(text):
     exp = []
 
@@ -100,7 +101,7 @@ def operationRecognize(text):
     text = text.replace('минус', '-')
 
     # если знак "прилип" к числу, ставим вокруг знака пробелы, можно корректно обрабатывать "три-вторых"
-    if re.findall('\S+/|/+\S', text):
+    if re.findall('\S\/|\/\S', text):
         text = text.replace('/', ' / ')
 
     # разделяем получившуюся строку на массив
