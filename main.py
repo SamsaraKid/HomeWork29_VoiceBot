@@ -76,6 +76,8 @@ def operationRecognize(text):
     text = text.replace('поделить', '/')
     text = text.replace('минус', '-')
     text = text.replace('число пи', '3.14')
+    text = text.replace('скобка открывается', '(')
+    text = text.replace('скобка открывается', ')')
 
     # если знак "прилип" к числу, ставим вокруг знака пробелы
     if re.findall('\S+x|x+\S', text):
@@ -84,8 +86,9 @@ def operationRecognize(text):
         text = text.replace('/', ' / ')
     if re.findall('\S+\+|\++\S', text):
         text = text.replace('+', ' + ')
-    if re.findall('\S+-|-+\S', text):
+    if re.findall('\S+\-|\-+\S', text):
         text = text.replace('-', ' - ')
+
 
     # разделяем получившуюся строку на массив
     text = text.split()
@@ -96,38 +99,58 @@ def operationRecognize(text):
             exp.append(float(i))
         except:
             pass
-        if i in ['+', '-', 'x', '/']:
+        if i in ['+', '-', 'x', '/', '(', ')']:
             exp.append(i)
 
     # если в массиве пусто, то выражения нет, ошибка
     if exp == []:
         return 'error'
 
+    # если последний элемент выражения знак, то ошибка
+    if isinstance(exp[-1], str):
+        return 'error'
 
     if exp[0] == '-' and isinstance(exp[1], float):                                                    # если выражение начинается со знака '-', и следующее число
         exp[1] = -exp[1]                                                                               # то следующее число делаем отрицательным
         exp.pop(0)                                                                                     # а знак '-' выбрасываем
+    elif exp[0] in ['+', 'x', '/', ')']:                                                               # если первый элемент не число или не (, то ошибка
+        return 'error'
 
-
+    # распознаём отрицательные числа
     i = 1
     while i < len(exp):
-        if i % 2 == 0:
-            if isinstance(exp[i], str):                                                                 # если на чётном месте знак
-                if exp[i] == '-' and isinstance(exp[i - 1], str) and isinstance(exp[i + 1], float):     # если этот знак '-' и предыдущее тоже знак и следующее число
-                    exp[i + 1] = -exp[i + 1]                                                            # то следующее число делаем отрицательным
-                    exp.pop(i)                                                                          # а знак '-' выбрасываем
-                    i -= 1                                                                              # и сдвигаем счётчик назад
-                else:                                                                                   # в остальных случаях выражение ошибочно
-                    return 'error'
+        if exp[i] == '-' and isinstance(exp[i - 1], str) and isinstance(exp[i + 1], float):
+            exp[i + 1] = -exp[i + 1]
+            exp.pop(i)
         else:
-            if isinstance(exp[i], float):                                                               # если на нечётном месте число
-                return 'error'                                                                          # то выражение ошибочно
-        i += 1
+            i += 1
 
-
-    # если последний элемент выражения знак, то ошибка
-    if isinstance(exp[-1], str):
+    # распознаём ошибки: два знака подряд, или два числа подряд, или знак после ( или знак перед ), или пустые скобки
+    expTemp = ' '.join(exp)
+    if re.findall('([\+\-/x]\s[\+\-/x])]', expTemp) or re.findall('\d\s\d', expTemp) or re.findall('(\(\s[\+\-/x])|([\+\-/x]\s\))', expTemp) or re.findall('\(\s\)', expTemp):
         return 'error'
+
+
+
+
+    # проверка корректности выражения
+    # i = 1
+    # while i < len(exp):
+    #     if i % 2 == 0:
+    #         if isinstance(exp[i], str):                                                                 # если на чётном месте знак
+    #             if exp[i] == '-' and isinstance(exp[i - 1], str) and isinstance(exp[i + 1], float):     # если этот знак '-' и предыдущее тоже знак и следующее число
+    #                 exp[i + 1] = -exp[i + 1]                                                            # то следующее число делаем отрицательным
+    #                 exp.pop(i)                                                                          # а знак '-' выбрасываем
+    #                 i -= 1                                                                              # и сдвигаем счётчик назад
+    #             else:                                                                                   # в остальных случаях выражение ошибочно
+    #                 return 'error'
+    #     else:
+    #         if isinstance(exp[i], float):                                                               # если на нечётном месте число
+    #             return 'error'                                                                          # то выражение ошибочно
+    #     i += 1
+
+
+
 
     # for i in range(len(exp)):
     #     if i % 2 == 0:
